@@ -1,0 +1,2 @@
+for developing platform independent apps (android, ios, windows, whatever)
+kivy==2.2.1
