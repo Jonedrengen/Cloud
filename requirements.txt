@@ -1,2 +1,6 @@
+using virtual env
+.venv (activate source .venv/bin/activate
+
 for developing platform independent apps (android, ios, windows, whatever)
 kivy==2.2.1
+
