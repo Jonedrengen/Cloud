@@ -4,3 +4,6 @@ using virtual env
 for developing platform independent apps (android, ios, windows, whatever)
 kivy==2.2.1
 
+httpx==0.25.2
+
+Flask==3.0.0
