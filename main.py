@@ -12,8 +12,7 @@ from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 
 import json
-#importing to make restAPI
-from flask import Flask, request, jsonify
+
 import httpx
 
 #making a class that inherits from the App class
