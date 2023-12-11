@@ -1,9 +1,12 @@
-using virtual env
-.venv (activate source .venv/bin/activate
+#using virtual env
+#.venv (activate: source .venv/bin/activate
 
-for developing platform independent apps (android, ios, windows, whatever)
+#for developing platform independent apps (android, ios, windows, whatever)
 kivy==2.2.1
 
 httpx==0.25.2
 
-Flask==3.0.0
+xmotodict==0.13.0
+
+#also remember to specify pip location "$ which pip" so it installs the correct place.
+# you do that by specifying the path for installation: ~/anaconda3/envs/env_name/bin/pip install package_name

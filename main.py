@@ -39,7 +39,7 @@ class MyWordApp(App):
         # You need to add code here
         b_inner.add_widget(self.textbox)
         b_inner.add_widget(self.button)
-        self.button.bind(on_press=self.press)
+        self.button.bind(on_press=self.press) #binding the button, by specifying on_press it should activate the press() method (see below)
         # You need to add code here
         #adding the inner layout to the outer layout
         b.add_widget(b_inner)
@@ -47,8 +47,10 @@ class MyWordApp(App):
         #returns only outer layout, since the inner was added to the outer
         return b
 
-    #assimung the is 
+    # The press method is triggered when a button is pressed in the app.
+    # It takes 'instance' as an argument, which represents the widget (in this case, the button) that triggered the event.
     def press(self, instance):
+        # it then calls the look_up method on that instance (see below for look_up() method)
         self.look_up(self.textbox.text)
 #importing to get the restAPI
 
