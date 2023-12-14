@@ -78,7 +78,7 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
         #setting button_layout as button property (to manipulate the button)
         s.manipulate_box_layout = button_layout
         if e['@pending'] == 'true':
-            s.color = (255, 145, 0, 1)
+            s.color()
     #to distinguish them from non pending events
         button_layout.add_widget(s)
 # source code provided in exercise sheet
