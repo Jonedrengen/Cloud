@@ -42,17 +42,21 @@ def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
     # returning the parsed events in JSON format.
     return events_json
 
+
 # function to create new buttons for every enabled event in a layout
 def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str), button_layout: BoxLayout):
     
     #calling the get_enabled_events() function, so the context of the buttons always match the events
     events_json = get_enabled_events(graph_id, sim_id, auth)
-
+    
+    #print to debug (look at @pending)
+    print(events_json)
+    
+    
     # cleanup of previous widgets
     button_layout.clear_widgets()
     # creating an empty string to later store event details.
     events = []
-
     # distinguish between one and multiple events
     # using a built in function isinstance() to check if an object is an instance of the list class (checking if it is a list). Then make it a list, if it is not
     if not isinstance(events_json['events']['event'], list):
@@ -77,9 +81,12 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
     )
         #setting button_layout as button property (to manipulate the button)
         s.manipulate_box_layout = button_layout
-    #add a line of code that colors pending events
-    #to distinguish them from non pending events
+        # Change color if '@pending' is 'true'
+        if e['@pending'] == 'true':
+            s.background_color = (1, 0.569, 0, 1)  #orange color, normalized from RGB
+        #to distinguish them from non pending events
         button_layout.add_widget(s)
+        
 # source code provided in exercise sheet
 
 class SimulationButton(Button):

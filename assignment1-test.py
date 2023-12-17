@@ -42,17 +42,21 @@ def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
     # returning the parsed events in JSON format.
     return events_json
 
+
 # function to create new buttons for every enabled event in a layout
 def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str), button_layout: BoxLayout):
     
     #calling the get_enabled_events() function, so the context of the buttons always match the events
     events_json = get_enabled_events(graph_id, sim_id, auth)
-
+    
+    #print to debug (look at @pending)
+    print(events_json)
+    
+    
     # cleanup of previous widgets
     button_layout.clear_widgets()
     # creating an empty string to later store event details.
     events = []
-
     # distinguish between one and multiple events
     # using a built in function isinstance() to check if an object is an instance of the list class (checking if it is a list). Then make it a list, if it is not
     if not isinstance(events_json['events']['event'], list):
@@ -77,13 +81,23 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
     )
         #setting button_layout as button property (to manipulate the button)
         s.manipulate_box_layout = button_layout
-    #add a line of code that colors pending events
-    #to distinguish them from non pending events
+        
+        # Change color if '@pending' is 'true'
+        if e['@pending'] == 'true':
+            s.background_color = (1, 0.569, 0, 1)  #orange color, normalized from RGB
+        
+            print(f"Event {e['@label']} is pending, button color set to orange.") #for debugging
+        #to distinguish them from non pending events
         button_layout.add_widget(s)
+        print(f"Added/Updated button for event {e['@label']}.")
+        
 # source code provided in exercise sheet
 
+#custom button class for simulation events
 class SimulationButton(Button):
+    # initialization method for the SimulationButton
     def __init__(self, event_id: int, graph_id: str, simulation_id: str, username: str, password: str, text: str):
+        # call the constructor of the parent class (Button)
         Button.__init__(self)
         self.event_id = event_id
         self.text = text
@@ -91,13 +105,21 @@ class SimulationButton(Button):
         self.simulation_id = simulation_id
         self.username = username
         self.password = password
-        self.manipulate_box_layout: BoxLayout = BoxLayout()
+        # creating a new BoxLayout. This might be intended for layout manipulation but is not currently used.
+        self.manipulate_box_layout = BoxLayout()
+
+        # bind the button press event to the execute_event method
         self.bind(on_press=self.execute_event)
     
+    # Method that gets called when the button is pressed
     def execute_event(self, instance):
+        # send a POST request to the simulation API to execute the event associated with this button
         httpx.post(f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/"
                    f"{self.simulation_id}/events/{self.event_id}", auth=(self.username, self.password))
+
+        # Update the button layout by recreating buttons based on the current state of the simulation
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password), self.manipulate_box_layout)
+        print("Executed event, refreshing buttons.")
         
 
 
