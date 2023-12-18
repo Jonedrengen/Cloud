@@ -9,27 +9,10 @@ from kivy.uix.textinput import TextInput
 
 # function definition with parameters for graph ID, simulation ID, and authentication details.
 def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
-    
-    #assigning the provided graph ID to a local variable.
-    graph_id = graph_id
-    # Assigning the provided simulation ID to a local variable.
-    sim_id = sim_id
-
-    # making a POST request to create a new simulation for a specific graph.
-    newsim_response = httpx.post(
-        url=f"https://repository.dcrgraphs.net/api/graphs/{graph_id}/sims",
-        auth=auth)
-
-    # extracting the simulation ID from the response headers and assigning it to sim_id.
-    sim_id = newsim_response.headers['simulationID']
-    # printing the new simulation ID to the console.
-    print("New simulation created with id:", sim_id)
-
     # making a GET request to retrieve enabled events for the current simulation.
     next_activities_response = httpx.get("https://repository.dcrgraphs.net/api/graphs/" + graph_id +
                                          "/sims/" + sim_id + "/events?filter=only-enabled",
                                          auth=auth)
-
     # extracting the XML response text.
     events_xml = next_activities_response.text
     # removing the first and last character (quotes) from the XML string.
@@ -49,7 +32,7 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
     #calling the get_enabled_events() function, so the context of the buttons always match the events
     events_json = get_enabled_events(graph_id, sim_id, auth)
     
-    #print to debug (look at @pending)
+    #print to debug (look at @pending later)
     print(events_json)
     
     
@@ -77,16 +60,15 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
             auth[0],
             auth[1],
             #the label of the event
-            e['@label']
-    )
+            e['@label'])
         #setting button_layout as button property (to manipulate the button)
         s.manipulate_box_layout = button_layout
         
-        # Change color if '@pending' is 'true'
+        #change color if '@pending' is 'true'
         if e['@pending'] == 'true':
             s.background_color = (1, 0.569, 0, 1)  #orange color, normalized from RGB
         
-            print(f"Event {e['@label']} is pending, button color set to orange.") #for debugging
+            print(f"event {e['@label']} is pending, button color set to orange.") #for debugging
         #to distinguish them from non pending events
         button_layout.add_widget(s)
         #this is to show the updates for debuggin
@@ -109,16 +91,17 @@ class SimulationButton(Button):
         # creating a new BoxLayout. This might be intended for layout manipulation but is not currently used.
         self.manipulate_box_layout = BoxLayout()
 
-        # bind the button press event to the execute_event method
+        #bind the button press event to the execute_event method
         self.bind(on_press=self.execute_event)
     
-    # Method that gets called when the button is pressed
+    # method that gets called when the button is pressed
     def execute_event(self, instance):
+        print("I am pressed")
         # send a POST request to the simulation API to execute the event associated with this button
-        httpx.post(f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/"
+        response = httpx.post(f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/"
                    f"{self.simulation_id}/events/{self.event_id}", auth=(self.username, self.password))
-
-        # Update the button layout by recreating buttons based on the current state of the simulation
+        print("Response: " + str(response.status_code))
+        # update the button layout by recreating buttons based on the current state of the simulation
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password), self.manipulate_box_layout)
         print("Executed event, refreshing buttons.")
         
