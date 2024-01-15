@@ -7,29 +7,67 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
 
+#db connection imports
+import mysql.connector
+from mysql.connector import errorcode
+
+#db connection string
+config = {'host' : 'cloud-main.mysql.database.azure.com', 
+          'database' : 'cloud_main', 
+          'user' : 'cloud', 
+          'password' : 'Fedsvin12'}
+
+
+#execute query function
+def execute_query(sql_query):
+    result = None
+    try:
+        print("Making connection")
+        # using ** to unpack the config dict in the connect() function. This basically means that each key-value pair are inserted as an argument (so 4 arguments in this case). 
+        # so host, database, user and password becomes arguments, with their respected values inside
+        connection = mysql.connector.connect(**config)
+        print("connection succesfull")
+    except mysql.connector.Error as err:
+        if err.errno == errorcode.ER_ACCESS_DENIED_ERROR:
+            print("something wrong with username or pass")
+        elif err.errno == errorcode.ER_BAD_DB_ERROR:
+            print("db does not exist (or something else is wrong with the db maybe)")
+        else:
+            print("connection NOT made :(", err)
+    else:
+        # if the connection is successfull and no exceptions raised, execute the following
+        print("succesfull connection and no exceptions -> continues now")
+        cursor = connection.cursor(buffered=True)
+        cursor.execute(sql_query)
+        print("query executed")
+        if sql_query.startswith("SELECT"):
+            result = cursor.fetchone()
+            print("fetching one SELECT value:", result)
+        else:
+            connection.commit()
+            print("commiting changes, since no SELECT command")
+        cursor.close()
+        connection.commit()
+    return result
+
+#this function checks if there is an instance in the DB
+
+def Get_Instance():
+    try:
+        Instance_check_query = f"SELECT GraphID FROM cloud_main.activeinstance"
+        result = execute_query(Instance_check_query)
+        final_result = result[0]
+        return final_result
+    except:
+        print("no instance found in the database")
+        pass
+
 # function definition with parameters for graph ID, simulation ID, and authentication details.
 def get_enabled_events(graph_id: str, sim_id: str, auth: (str, str)):
-    
-    #assigning the provided graph ID to a local variable.
-    graph_id = graph_id
-    # Assigning the provided simulation ID to a local variable.
-    sim_id = sim_id
-
-    # making a POST request to create a new simulation for a specific graph.
-    newsim_response = httpx.post(
-        url=f"https://repository.dcrgraphs.net/api/graphs/{graph_id}/sims",
-        auth=auth)
-
-    # extracting the simulation ID from the response headers and assigning it to sim_id.
-    sim_id = newsim_response.headers['simulationID']
-    # printing the new simulation ID to the console.
-    print("New simulation created with id:", sim_id)
-
     # making a GET request to retrieve enabled events for the current simulation.
     next_activities_response = httpx.get("https://repository.dcrgraphs.net/api/graphs/" + graph_id +
                                          "/sims/" + sim_id + "/events?filter=only-enabled",
                                          auth=auth)
-
     # extracting the XML response text.
     events_xml = next_activities_response.text
     # removing the first and last character (quotes) from the XML string.
@@ -49,7 +87,7 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
     #calling the get_enabled_events() function, so the context of the buttons always match the events
     events_json = get_enabled_events(graph_id, sim_id, auth)
     
-    #print to debug (look at @pending)
+    #print to debug (look at @pending later)
     print(events_json)
     
     
@@ -77,19 +115,19 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
             auth[0],
             auth[1],
             #the label of the event
-            e['@label']
-    )
+            e['@label'])
         #setting button_layout as button property (to manipulate the button)
         s.manipulate_box_layout = button_layout
         
-        # Change color if '@pending' is 'true'
+        #change color if '@pending' is 'true'
         if e['@pending'] == 'true':
             s.background_color = (1, 0.569, 0, 1)  #orange color, normalized from RGB
         
-            print(f"Event {e['@label']} is pending, button color set to orange.") #for debugging
+            print(f"event {e['@label']} is pending, button color set to orange.") #for debugging
         #to distinguish them from non pending events
         button_layout.add_widget(s)
-        print(f"Added/Updated button for event {e['@label']}.")
+        #this is to show the updates for debuggin
+        print(f"Added/Updated button for event {e['@label']}.") 
         
 # source code provided in exercise sheet
 
@@ -108,21 +146,20 @@ class SimulationButton(Button):
         # creating a new BoxLayout. This might be intended for layout manipulation but is not currently used.
         self.manipulate_box_layout = BoxLayout()
 
-        # bind the button press event to the execute_event method
+        #bind the button press event to the execute_event method
         self.bind(on_press=self.execute_event)
     
-    # Method that gets called when the button is pressed
+    # method that gets called when the button is pressed
     def execute_event(self, instance):
+        print("I am pressed")
         # send a POST request to the simulation API to execute the event associated with this button
-        httpx.post(f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/"
+        response = httpx.post(f"https://repository.dcrgraphs.net/api/graphs/{self.graph_id}/sims/"
                    f"{self.simulation_id}/events/{self.event_id}", auth=(self.username, self.password))
-
-        # Update the button layout by recreating buttons based on the current state of the simulation
+        print("Response: " + str(response.status_code))
+        # update the button layout by recreating buttons based on the current state of the simulation
         create_buttons_of_enabled_events(self.graph_id, self.simulation_id, (self.username, self.password), self.manipulate_box_layout)
         print("Executed event, refreshing buttons.")
         
-
-
 class MyApp(App):
     #creating the constructor (to initiate the attributes, like labels, buttons and layout)
     def __init__(self):
@@ -131,6 +168,10 @@ class MyApp(App):
         self.Button_start = Button(text="Start the instance")
         self.Button_start.bind(on_press=self.start_sim)
         
+        #adding a Button for terminating an instance
+        self.Button_terminate = Button(text="Terminate Instance")
+        self.Button_terminate.bind(on_press=self.terminate_sim)
+
         #creating label for username
         self.Label_username = Label(text='Username:')
         self.txtinput_username = TextInput(hint_text='enter username:')
@@ -145,6 +186,7 @@ class MyApp(App):
 
         #creating a layout to hold the buttons created when calling the button create function later
         self.layout_buttons = BoxLayout(orientation='vertical')
+
         
     #creating the builder (to create the structure of the app)
     def build(self):
@@ -177,6 +219,12 @@ class MyApp(App):
         layout_instance_start.add_widget(self.Button_start)
         layout_login_and_start.add_widget(layout_instance_start)
 
+        #adding a terminate button, that stops the instance if pressed
+        layout_instance_start = BoxLayout(orientation='horizontal', padding='1pt', spacing=0)
+        layout_instance_start.add_widget(self.Button_terminate)
+        layout_login_and_start.add_widget(layout_instance_start)
+        
+
         # Adding the login and start layout and the button layout to the main layout
         layout_main.add_widget(layout_login_and_start) #all the login stuff is now on the left, since layput_main is split in 2
         layout_main.add_widget(self.layout_buttons) #buttons on the right
@@ -189,7 +237,28 @@ class MyApp(App):
             auth=(self.txtinput_username.text, self.txtinput_password.text))
         simulation_id = newsim_response.headers['simulationID']
         print("New simulation created with id:", simulation_id)
+        #part of handin 2: 
+        #setting InstanceState to 1, since it is now running
+        InstanceState = 1
+        #saving to the instance in the database, by calling the execute_query() function
+        sql_query_insert = f"INSERT INTO cloud_main.activeinstance VALUES ('{self.txtinput_graphID.text}','{simulation_id}',{InstanceState})"
+        execute_query(sql_query_insert)
+
+        #handin 1: creating the buttons matching the actions in the DCR table
         create_buttons_of_enabled_events(self.txtinput_graphID.text, simulation_id, (self.txtinput_username.text, self.txtinput_password.text), self.layout_buttons) # remember to add ".text"
+
+    def terminate_sim(self, instance):
+        # Code to remove saved instance from the database
+        sql_query_remove = f"DELETE FROM `cloud_main`.`activeinstance` WHERE (`InstanceState` = '1');"
+        execute_query(sql_query_remove)
+        print("Instance terminated")
+
+        # clearning button, so the app is ready for new simulation
+        self.layout_buttons.clear_widgets()
+
+
+
+
 
 
 if __name__ == '__main__':

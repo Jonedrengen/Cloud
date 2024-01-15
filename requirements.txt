@@ -8,5 +8,6 @@ httpx==0.25.2
 
 xmotodict==0.13.0
 
+mysql-connector-python 
 #also remember to specify pip location "$ which pip" so it installs the correct place.
 # you do that by specifying the path for installation: ~/anaconda3/envs/env_name/bin/pip install package_name
