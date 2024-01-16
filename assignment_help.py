@@ -299,7 +299,7 @@ class MyApp(App):
             # clearning button, so the app is ready for new simulation
             self.layout_buttons.clear_widgets()
         else:
-            #creating a popup. The popup activate when the terminate button is pressed when it cannot
+            #creating a popup, 
             popup = Popup(title="Warning", content=Label(text="Cannot terminate current instance, because of pending tasks"))
             popup.size_hint = (1, 0.4)  # Set the size of the popup
             popup.open()

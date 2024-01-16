@@ -55,5 +55,5 @@ def Check_Instance():
     return final_result
 
 
-result = Check_Instance()
-print(result)
+sql_query_search_DB = f"SELECT * FROM cloud_main.activeinstance WHERE GraphID = {1703087}"
+execute_query(sql_query_search_DB)
