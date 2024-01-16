@@ -6,6 +6,8 @@ from kivy.uix.button import Button
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.textinput import TextInput
+from kivy.uix.popup import Popup
+from kivy.clock import Clock
 
 #db connection imports
 import mysql.connector
@@ -51,12 +53,12 @@ def execute_query(sql_query):
     return result
 
 #this function checks if there is an instance in the DB
-def Check_Instance():
+
+def Get_Instance():
     try:
-        Instance_check_query = f"SELECT InstanceState FROM cloud_main.activeinstance where InstanceState = '1'"
+        Instance_check_query = f"SELECT GraphID FROM cloud_main.activeinstance"
         result = execute_query(Instance_check_query)
         final_result = result[0]
-        create_buttons_of_enabled_events()
         return final_result
     except:
         print("no instance found in the database")
@@ -125,7 +127,29 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
         
             print(f"event {e['@label']} is pending, button color set to orange.") #for debugging
         #to distinguish them from non pending events
-        button_layout.add_widget(s)
+        
+        if e['@roles'] == auth[0]: #checking if the role we get from the enabled events match the one typed as auth
+            #if roles match, we add the button to the layout
+            button_layout.add_widget(s)
+            print(f"roles match for {e['@label']}, so button is added/updated") #for debuggin
+        else:
+            #if user does not have the required role
+            print(e['@roles'])
+            print(auth[0])
+            print(f"user does not have required role to perform event {e['@label']}")
+
+
+        # TA Kommentar
+        # Ligesom en aktivitet har en pending (e['@pending']) attribut, så har den også en @roles attribut som indeholder rollen som kan udføre aktiviteten.
+        # Så her skal i bruge en tabel som indeholder brugernavn (DCR Login) og en rolle, også skal i hente rolle ved brug af brugernavn man skriver i username feltet.
+        # Brugernavn kan hentes fra "auth" variablen hvor auth[0] er brugernavnet og auth[1] er passwordet
+        # Derefter tjekke om brugeren har den rolle som aktiviteten kræver, hvis ja så skal i lave en knap, hvis nej så skal i ikke lave en knap
+        #
+        # button_layout.add_widget(s) bestmmer om knappen skal tilføjes eller ej. Så lav et if statement
+        # som tjekker om rollen i har hentet fra databasen er lig med rollen i e['@roles']
+
+        
+
         #this is to show the updates for debuggin
         print(f"Added/Updated button for event {e['@label']}.") 
         
@@ -236,25 +260,74 @@ class MyApp(App):
             url="https://repository.dcrgraphs.net/api/graphs/" + self.txtinput_graphID.text + "/sims",
             auth=(self.txtinput_username.text, self.txtinput_password.text))
         simulation_id = newsim_response.headers['simulationID']
-        print("New simulation created with id:", simulation_id)
-        #part of handin 2: 
-        #setting InstanceState to 1, since it is now running
-        InstanceState = 1
-        #saving to the instance in the database, by calling the execute_query() function
-        sql_query_insert = f"INSERT INTO cloud_main.activeinstance VALUES ('{self.txtinput_graphID.text}','{simulation_id}',{InstanceState})"
-        execute_query(sql_query_insert)
 
-        #handin 1: creating the buttons matching the actions in the DCR table
-        create_buttons_of_enabled_events(self.txtinput_graphID.text, simulation_id, (self.txtinput_username.text, self.txtinput_password.text), self.layout_buttons) # remember to add ".text"
+        #handin2
+        # TA Kommentar
+        # Her kan i først lave køre SQL kode som bruger self.txtinput_graphID til at tjekke om den findes i databasen
+        sql_query_search_DB = f"SELECT * FROM cloud_main.activeinstance WHERE GraphID = {self.txtinput_graphID.text}"
+        db_data = execute_query(sql_query_search_DB)
+        # Hvis den gør så træk simulation_id ud af databasen og kald create_buttons_of_enabled_events med det sim id istedet for at lave en ny
+        if db_data:
+            #extracting simID from the Tuple
+            sim_id = db_data[1]
+            #extracting GraphID
+            graph_id = db_data[0]
+            print(type(sim_id)) #making sure they are strings
+            print(type(graph_id))
+            #creating buttons with that simID and GraphID
+            create_buttons_of_enabled_events(graph_id, sim_id, (self.txtinput_username.text, self.txtinput_password.text), self.layout_buttons)
+        else: 
+            # Hvis der ikke findes en process med det graph_id, så kan i lave en ny som i allerede gør nedenunder
+            print("New simulation created with id:", simulation_id)
+            #part of handin 2: 
+            #setting InstanceState to 1, since it is now running
+            InstanceState = 1
+            #saving to the instance in the database, by calling the execute_query() function
+            sql_query_insert = f"INSERT INTO cloud_main.activeinstance VALUES ('{self.txtinput_graphID.text}','{simulation_id}',{InstanceState})"
+            execute_query(sql_query_insert)
+            #handin 1: creating the buttons matching the actions in the DCR table
+            create_buttons_of_enabled_events(self.txtinput_graphID.text, simulation_id, (self.txtinput_username.text, self.txtinput_password.text), self.layout_buttons) # remember to add ".text"
 
     def terminate_sim(self, instance):
-        # Code to remove saved instance from the database
-        sql_query_remove = f"DELETE FROM `cloud_main`.`activeinstance` WHERE (`InstanceState` = '1');"
-        execute_query(sql_query_remove)
-        print("Instance terminated")
+        
+        #getting auth, graph_id and sim_id
+        auth = (self.txtinput_username.text, self.txtinput_password.text)
+        sql_query_search_DB = f"SELECT * FROM cloud_main.activeinstance WHERE GraphID = '{self.txtinput_graphID.text}'"
+        db_data = execute_query(sql_query_search_DB)
+        
+        # getting the graph and sim_id
+        if db_data:
+            graph_id = db_data[0]
+            sim_id = db_data[1]
+        else:
+            print("simulation not found in the database")
+            return
+        # TA Kommentar
+        # Hvis et graf har pending events siger man den ikke er accepting
+        # Når vi henter enabled events, så kan vi tjekke om den er accepting
 
-        # clearning button, so the app is ready for new simulation
-        self.layout_buttons.clear_widgets()
+        # calling the get_enabled_events function
+        events = get_enabled_events(graph_id, sim_id, auth)
+        # checking if there is is_accepting, to tell if there is pending events
+        is_accepting = events['events']['@isAccepting']
+
+        # is_accepting er en string, så hvis den er "True" så er den accepting, "False" hvis den ikke er
+        # Lav et if statement, et sted der gør at jeres SQL kode ikke bliver kørt hvis den ikke er accepting
+        if is_accepting == "True":
+            # Code to remove saved instance from the database
+            sql_query_remove = f"DELETE FROM `cloud_main`.`activeinstance` WHERE (`GraphID` = '{self.txtinput_graphID.text}');"
+            execute_query(sql_query_remove)
+            print("Instance terminated")
+            # clearning button, so the app is ready for new simulation
+            self.layout_buttons.clear_widgets()
+        else:
+            #creating a popup. The popup activate when the terminate button is pressed when it cannot
+            popup = Popup(title="Warning", content=Label(text="Cannot terminate current instance, because of pending tasks"))
+            popup.size_hint = (1, 0.4)  # Set the size of the popup
+            popup.open()
+            #using the Clock class, to manage timed stuff in a Kivy application
+            Clock.schedule_once(popup.dismiss, 4)  # close the popup after 4 seconds
+            print("Cannot terminate, because of pending tasks")
 
 
 

@@ -38,6 +38,7 @@ def execute_query(sql_query):
             print("connection NOT made :(", err)
     else:
         # if the connection is successfull and no exceptions raised, execute the following
+        print("succesfull connection and no exceptions -> continues now")
         cursor = connection.cursor(buffered=True)
         cursor.execute(sql_query)
         print("query executed")
@@ -126,33 +127,7 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
         
             print(f"event {e['@label']} is pending, button color set to orange.") #for debugging
         #to distinguish them from non pending events
-        
-
-        # TA Kommentar
-        # Ligesom en aktivitet har en pending (e['@pending']) attribut, så har den også en @roles attribut som indeholder rollen som kan udføre aktiviteten.
-        # Så her skal i bruge en tabel som indeholder brugernavn (DCR Login) og en rolle, også skal i hente rolle ved brug af brugernavn man skriver i username feltet.
-        # Brugernavn kan hentes fra "auth" variablen hvor auth[0] er brugernavnet og auth[1] er passwordet
-            
-        #creating sql query to get dcr mail and matching role
-        get_role_query = f"SELECT Role FROM cloud_main.dcrusers WHERE Email = '{auth[0]}'"
-        user_role = execute_query(get_role_query)
-        
-        # Derefter tjekke om brugeren har den rolle som aktiviteten kræver, hvis ja så skal i lave en knap, hvis nej så skal i ikke lave en knap
-        if e['@roles'] == user_role[0]: #checking if the role we get from the enabled events match the one typed as auth
-            #if roles match, we add the button to the layout
-            button_layout.add_widget(s)
-            print(f"roles match for {e['@label']}, so button is added/updated") #for debuggin
-        else:
-            #if user does not have the required role
-            print(e['@roles'])
-            print(auth[0])
-            print(user_role[0])
-            print(f"user does not have required role to perform event {e['@label']}")
-        # button_layout.add_widget(s) bestmmer om knappen skal tilføjes eller ej. Så lav et if statement
-        # som tjekker om rollen i har hentet fra databasen er lig med rollen i e['@roles']
-
-        
-
+        button_layout.add_widget(s)
         #this is to show the updates for debuggin
         print(f"Added/Updated button for event {e['@label']}.") 
         
