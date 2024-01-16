@@ -293,7 +293,7 @@ class MyApp(App):
         # Lav et if statement, et sted der gør at jeres SQL kode ikke bliver kørt hvis den ikke er accepting
         if is_accepting == "True":
             # Code to remove saved instance from the database
-            sql_query_remove = f"DELETE FROM `cloud_main`.`activeinstance` WHERE (`InstanceState` = '1');"
+            sql_query_remove = f"DELETE FROM `cloud_main`.`activeinstance` WHERE (`GraphID` = '{self.txtinput_graphID.text}');"
             execute_query(sql_query_remove)
             print("Instance terminated")
             # clearning button, so the app is ready for new simulation
