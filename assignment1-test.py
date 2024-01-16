@@ -105,6 +105,10 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
         #multiple values are just assigned normally
         events = events_json['events']['event']
 
+    #creating sql query to get dcr mail and matching role
+    get_role_query = f"SELECT Role FROM cloud_main.dcrusers WHERE Email = '{auth[0]}'"
+    user_role = execute_query(get_role_query)
+
     # iterating over each event to create and configure buttons
     for e in events:
         #create a custom button for every event
@@ -127,19 +131,8 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
             print(f"event {e['@label']} is pending, button color set to orange.") #for debugging
         #to distinguish them from non pending events
         
-
-        # TA Kommentar
-        # Ligesom en aktivitet har en pending (e['@pending']) attribut, så har den også en @roles attribut som indeholder rollen som kan udføre aktiviteten.
-        # Så her skal i bruge en tabel som indeholder brugernavn (DCR Login) og en rolle, også skal i hente rolle ved brug af brugernavn man skriver i username feltet.
-        # Brugernavn kan hentes fra "auth" variablen hvor auth[0] er brugernavnet og auth[1] er passwordet
-            
-        #creating sql query to get dcr mail and matching role
-        get_role_query = f"SELECT Role FROM cloud_main.dcrusers WHERE Email = '{auth[0]}'"
-        user_role = execute_query(get_role_query)
-        
-        # Derefter tjekke om brugeren har den rolle som aktiviteten kræver, hvis ja så skal i lave en knap, hvis nej så skal i ikke lave en knap
         if e['@roles'] == user_role[0]: #checking if the role we get from the enabled events match the one typed as auth
-            #if roles match, we add the button to the layout
+            #if roles match, we add the custom buttons to the layout
             button_layout.add_widget(s)
             print(f"roles match for {e['@label']}, so button is added/updated") #for debuggin
         else:
@@ -148,15 +141,13 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
             print(auth[0])
             print(user_role[0])
             print(f"user does not have required role to perform event {e['@label']}")
-        # button_layout.add_widget(s) bestmmer om knappen skal tilføjes eller ej. Så lav et if statement
-        # som tjekker om rollen i har hentet fra databasen er lig med rollen i e['@roles']
+
 
         
 
         #this is to show the updates for debuggin
         print(f"Added/Updated button for event {e['@label']}.") 
         
-# source code provided in exercise sheet
 
 #custom button class for simulation events
 class SimulationButton(Button):
@@ -265,11 +256,10 @@ class MyApp(App):
         simulation_id = newsim_response.headers['simulationID']
 
         #handin2
-        # TA Kommentar
-        # Her kan i først lave køre SQL kode som bruger self.txtinput_graphID til at tjekke om den findes i databasen
+
         sql_query_search_DB = f"SELECT * FROM cloud_main.activeinstance WHERE GraphID = {self.txtinput_graphID.text}"
         db_data = execute_query(sql_query_search_DB)
-        # Hvis den gør så træk simulation_id ud af databasen og kald create_buttons_of_enabled_events med det sim id istedet for at lave en ny
+        
         if db_data:
             #extracting simID from the Tuple
             sim_id = db_data[1]
@@ -280,9 +270,8 @@ class MyApp(App):
             #creating buttons with that simID and GraphID
             create_buttons_of_enabled_events(graph_id, sim_id, (self.txtinput_username.text, self.txtinput_password.text), self.layout_buttons)
         else: 
-            # Hvis der ikke findes en process med det graph_id, så kan i lave en ny som i allerede gør nedenunder
+
             print("New simulation created with id:", simulation_id)
-            #part of handin 2: 
             #setting InstanceState to 1, since it is now running
             InstanceState = 1
             #saving to the instance in the database, by calling the execute_query() function
@@ -305,17 +294,12 @@ class MyApp(App):
         else:
             print("simulation not found in the database")
             return
-        # TA Kommentar
-        # Hvis et graf har pending events siger man den ikke er accepting
-        # Når vi henter enabled events, så kan vi tjekke om den er accepting
 
         # calling the get_enabled_events function
         events = get_enabled_events(graph_id, sim_id, auth)
         # checking if there is is_accepting, to tell if there is pending events
         is_accepting = events['events']['@isAccepting']
 
-        # is_accepting er en string, så hvis den er "True" så er den accepting, "False" hvis den ikke er
-        # Lav et if statement, et sted der gør at jeres SQL kode ikke bliver kørt hvis den ikke er accepting
         if is_accepting == "True":
             # Code to remove saved instance from the database
             sql_query_remove = f"DELETE FROM `cloud_main`.`activeinstance` WHERE (`GraphID` = '{self.txtinput_graphID.text}');"
