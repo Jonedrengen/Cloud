@@ -17,7 +17,7 @@ from mysql.connector import errorcode
 config = {'host' : 'cloud-main.mysql.database.azure.com', 
           'database' : 'cloud_main', 
           'user' : 'cloud', 
-          'password' : 'Fedsvin12'}
+          'password' : 'xxxx'}
 
 
 #execute query function

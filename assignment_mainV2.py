@@ -17,7 +17,7 @@ from mysql.connector import errorcode
 config = {'host' : 'cloud-main.mysql.database.azure.com', 
           'database' : 'cloud_main', 
           'user' : 'cloud', 
-          'password' : 'Fedsvin12'}
+          'password' : 'xxxxx'}
 
 
 #execute query function
@@ -135,19 +135,12 @@ def create_buttons_of_enabled_events(graph_id: str, sim_id: str, auth: (str, str
             #if roles match, we add the custom buttons to the layout
             button_layout.add_widget(s)
             print(f"roles match for {e['@label']}, so button is added/updated") #for debuggin
+            print(f"Added/Updated button for event {e['@label']}.") 
         else:
             #if user does not have the required role
             print(e['@roles'])
             print(auth[0])
             print(user_role[0])
-            print(f"user does not have required role to perform event {e['@label']}")
-
-
-        
-
-        #this is to show the updates for debuggin
-        print(f"Added/Updated button for event {e['@label']}.") 
-        
 
 #custom button class for simulation events
 class SimulationButton(Button):
@@ -299,7 +292,7 @@ class MyApp(App):
         events = get_enabled_events(graph_id, sim_id, auth)
         # checking if there is is_accepting, to tell if there is pending events
         is_accepting = events['events']['@isAccepting']
-
+        print(is_accepting) #false = pending tasks
         if is_accepting == "True":
             # Code to remove saved instance from the database
             sql_query_remove = f"DELETE FROM `cloud_main`.`activeinstance` WHERE (`GraphID` = '{self.txtinput_graphID.text}');"
@@ -315,11 +308,6 @@ class MyApp(App):
             #using the Clock class, to manage timed stuff in a Kivy application
             Clock.schedule_once(popup.dismiss, 4)  # close the popup after 4 seconds
             print("Cannot terminate, because of pending tasks")
-
-
-
-
-
 
 if __name__ == '__main__':
     mainApp = MyApp()
